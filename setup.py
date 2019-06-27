@@ -18,6 +18,6 @@ setup(
     license='MIT',
     install_requires=[
         'Django>=1.9',
-        'boto3==1.4.6',
+        'boto3>=1.9.176',
     ]
 )

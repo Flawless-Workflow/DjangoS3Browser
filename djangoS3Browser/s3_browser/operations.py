@@ -1,6 +1,8 @@
 import boto3
 import sys
 
+from urllib.parse import urljoin
+
 try:
     from StringIO import StringIO
 except ImportError:
@@ -8,10 +10,23 @@ except ImportError:
 
 from django.conf import settings
 
-s3 = boto3.resource('s3', aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-                    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY)
-s3client = boto3.client('s3', aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-                        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY)
+"""
+If variable defined, will be use custom endpoint, else will be used Amazon endpoints
+"""
+ENDPOINT_URL = getattr(settings, 'AWS_ENDPOINT_URL', None)
+
+s3 = boto3.resource(
+    's3', aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+    endpoint_url=ENDPOINT_URL
+)
+s3client = boto3.client(
+    's3',
+    aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+    endpoint_url=ENDPOINT_URL
+)
+
 bucket = s3.Bucket(settings.AWS_STORAGE_BUCKET_NAME)
 bucket_location = s3client.get_bucket_location(Bucket=settings.AWS_STORAGE_BUCKET_NAME)
 """
@@ -40,8 +55,10 @@ def get_files(main_folder, result, sort_a_z):
         for obj in result:
             # main_folder[1:] exp; -folder1/folder2 => delete "-"
             if main_folder[1:] != obj.get('Key'):  # if obj is not folder item
-                object_url = "https://s3-{0}.amazonaws.com/{1}/{2}".format(
-                    bucket_location['LocationConstraint'], settings.AWS_STORAGE_BUCKET_NAME, obj.get('Key'))
+                object_url = urljoin(
+                    ENDPOINT_URL,
+                    "{0}/{1}".format(settings.AWS_STORAGE_BUCKET_NAME, obj.get('Key'))
+                )
                 # for template file icon
                 icon_list = [
                     'ai.png', 'audition.png', 'avi.png', 'bridge.png', 'css.png', 'csv.png', 'dbf.png', 'doc.png',
@@ -116,6 +133,13 @@ def rename(location, file, new_name):
     try:
         if file[-1] == "/" and new_name[-1] != "/":  # if file format exception
             new_name += "/"
+
+        if file == new_name:
+            """
+            If rename canceled
+            """
+            return location[1:] + file
+
         s3client.copy_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, ACL="public-read",
                              CopySource={'Bucket': settings.AWS_STORAGE_BUCKET_NAME, 'Key': location[1:] + file},
                              Key=new_name)
@@ -129,9 +153,10 @@ def rename(location, file, new_name):
 def paste(location, file_list):
     try:
         for file in file_list:
+            file = file.strip()[1:]
             s3client.copy_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, ACL="public-read",
-                                 CopySource={'Bucket': settings.AWS_STORAGE_BUCKET_NAME, 'Key': file[1:]},
-                                 Key=location[1:] + file[1:].rsplit('/', 1)[-1])
+                                 CopySource={'Bucket': settings.AWS_STORAGE_BUCKET_NAME, 'Key': file},
+                                 Key=location[1:] + file.rsplit('/', 1)[-1])
     except Exception as e:
         print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
         raise Exception('Paste Failed! ', e)
@@ -140,10 +165,13 @@ def paste(location, file_list):
 def move(location, file_list):
     try:
         for file in file_list:
+
+            file = file.strip()[1:]
+
             s3client.copy_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, ACL="public-read",
-                                 CopySource={'Bucket': settings.AWS_STORAGE_BUCKET_NAME, 'Key': file[1:]},
-                                 Key=location[1:] + file[1:].rsplit('/', 1)[-1])
-            s3client.delete_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=file[1:])
+                                 CopySource={'Bucket': settings.AWS_STORAGE_BUCKET_NAME, 'Key': file},
+                                 Key=location[1:] + file.rsplit('/', 1)[-1])
+            s3client.delete_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=file)
     except Exception as e:
         print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
         raise Exception('Move Failed! ', e)

@@ -90,8 +90,8 @@
 }
 
 .pb-filemng-paragraphs {
-    width: 130px;
-    height: 30px;
+    /*width: 130px;*/
+    /*height: 30px;*/
     overflow: hidden;
     text-overflow: ellipsis;
     font-size: 12px;

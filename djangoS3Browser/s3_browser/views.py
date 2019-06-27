@@ -1,6 +1,7 @@
 import json
 
 from django.http import HttpResponse
+from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 
 from .operations import *
@@ -60,3 +61,8 @@ def move_file(request):
 def delete_file(request):
     delete(request.POST.getlist('file_list[]'))
     return HttpResponse(json.dumps("OK"), content_type="application/json", status=200)
+
+
+@csrf_exempt
+def admin_index(request):
+    return render(request, 'admin_index.html', {})
