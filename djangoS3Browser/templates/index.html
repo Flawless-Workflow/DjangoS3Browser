@@ -8,21 +8,12 @@
                 <div class="container-fluid">
                     <!-- Navigation -->
                     <div class="navbar-header">
-                        <button type="button" class="pull-left navbar-toggle collapsed treeview-toggle-btn"
-                                data-toggle="collapse" data-target="#treeview-toggle" aria-expanded="false">
-                            <span class="sr-only">Toggle navigation</span>
-                            <span class="icon-bar"></span>
-                            <span class="icon-bar"></span>
-                            <span class="icon-bar"></span>
-                        </button>
-
                         <button type="button" class="navbar-toggle collapsed" data-toggle="collapse"
                                 data-target="#options" aria-expanded="false">
                             <span class="sr-only">Toggle navigation</span>
                             <span class="fa fa-gears"></span>
                         </button>
 
-                        <!-- Search button -->
                         <button type="button" class="navbar-toggle collapsed" data-toggle="collapse"
                                 data-target="#pb-filemng-navigation" aria-expanded="false">
                             <span class="sr-only">Toggle navigation</span>
@@ -51,10 +42,10 @@
                         <li><a href="javascript:;" onclick="download_files();"><span class="fa fa-download fa-lg"
                                                                                      title="{% trans "Download Selected File" %}"></span></a>
                         </li>
-                        <li><a href="javascript:;" onclick="copy_selected_file();"><span class="fa fa-lg fa-files-o"
+                        <li><a href="javascript:;" onclick="copy_selected_file();"><span class="fa fa-lg fa-file"
                                                                                          title="{% trans "Copy Select Files" %}"></span></a>
                         </li>
-                        <li><a href="javascript:;"><span class="fa fa-lg fa-trash-o" id="delete_file"
+                        <li><a href="javascript:;"><span class="fa fa-lg fa-trash" id="delete_file"
                                                          onclick="delete_file();"
                                                          title="{% trans "Delete  Select Files" %}"></span></a></li>
                         <li><a href="javascript:;"><span class="fa fa-lg fa-clipboard hidden" id="paste_file"
