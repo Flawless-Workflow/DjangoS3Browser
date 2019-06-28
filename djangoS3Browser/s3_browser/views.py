@@ -1,6 +1,6 @@
 import json
 
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 
@@ -60,6 +60,42 @@ def move_file(request):
 @csrf_exempt
 def delete_file(request):
     delete(request.POST.getlist('file_list[]'))
+    return HttpResponse(json.dumps("OK"), content_type="application/json", status=200)
+
+
+@csrf_exempt
+def get_item(request):
+    file = request.GET.get('file')
+    result = download_file(file)
+    response = HttpResponse(result['Body'].read())
+
+    return response
+
+
+@csrf_exempt
+def get_item_content(request):
+    file = request.GET.get('file')
+    result = download_file(file)
+    status = 200
+    try:
+        content = result['Body'].read().decode('utf-8')
+    except Exception as e:
+        content = "Not text"
+        status = 405
+
+    return HttpResponse(json.dumps({
+        "content": content
+    }), content_type="application/json", status=status)
+
+
+@csrf_exempt
+def update_item_content(request):
+    file: str = request.POST.get('file')
+    content: str = request.POST.get('content')
+
+    delete([file])
+    upload_file_content(file, content)
+
     return HttpResponse(json.dumps("OK"), content_type="application/json", status=200)
 
 

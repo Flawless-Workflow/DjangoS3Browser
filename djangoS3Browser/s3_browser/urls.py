@@ -16,20 +16,26 @@ Including another URLconf
 """
 from django.conf.urls import url
 from django.conf.urls.static import static
+from django.contrib.admin.views.decorators import staff_member_required
 
 from djangoS3Browser.s3_browser import settings
 from djangoS3Browser.s3_browser import views
 
 urlpatterns = [
-    url(r'^get_folder_items/(.+)/(.+)/$', views.get_folder_items, name='get_folder_items'),
-    url(r'^upload/$', views.upload, name='upload'),
-    url(r'^create_folder/$', views.create_folder, name='create_folder'),
-    url(r'^download/$', views.download, name='download'),
-    url(r'^rename_file/$', views.rename_file, name='rename_file'),
-    url(r'^paste_file/$', views.paste_file, name='paste_file'),
-    url(r'^move_file/$', views.move_file, name='move_file'),
-    url(r'^delete_file/$', views.delete_file, name='delete_file'),
-    url(r'', views.admin_index, name='admin_index')
+    url(r'^get_folder_items/(.+)/(.+)/$', staff_member_required(views.get_folder_items), name='get_folder_items'),
+    url(r'^upload/$', staff_member_required(views.upload), name='upload'),
+    url(r'^create_folder/$', staff_member_required(views.create_folder), name='create_folder'),
+
+    url(r'^download/$', staff_member_required(views.download), name='download'),
+    url(r'^get_item/$', staff_member_required(views.get_item), name='get_item'),
+    url(r'^get_item_content/$', staff_member_required(views.get_item_content), name='get_item_content'),
+    url(r'^update_item_content/$', staff_member_required(views.update_item_content), name='update_item_content'),
+
+    url(r'^rename_file/$', staff_member_required(views.rename_file), name='rename_file'),
+    url(r'^paste_file/$', staff_member_required(views.paste_file), name='paste_file'),
+    url(r'^move_file/$', staff_member_required(views.move_file), name='move_file'),
+    url(r'^delete_file/$', staff_member_required(views.delete_file), name='delete_file'),
+    url(r'', staff_member_required(views.admin_index), name='admin_index')
 ]
 
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

@@ -67,7 +67,7 @@ function get_s3_path(d) {
                 </div>
             `
     }
-    $('.modal-body').html(h);
+    $('#js-paths-links').html(h);
     $('#modalCenter').modal('show');
 }
 
@@ -101,7 +101,7 @@ function paste_file() {
         data: data,
         success: function (resultData) {
             copy_selected_file_list = [];
-            get_files(loc);
+            refresh_folder();
         },
     });
 }
@@ -116,7 +116,7 @@ function delete_file() {
         dataType: 'json',
         data: data,
         success: function (resultData) {
-            get_files(loc);
+            refresh_folder();
         },
     });
 }
@@ -134,9 +134,55 @@ function open_item(d) {
     if (type === 'folder') {
         get_files("-" + url)
     } else {
-        window.open(url, '_blank');
+        // window.open(url, '_blank');
+        edit_item(d);
     }
+}
 
+
+function get_item(d) {
+    // open file content in new tab
+    let file_item = $(d).find('.location-info').text();
+    window.open(getItemUrl + "?file=" + file_item, "_blank");
+}
+
+function edit_item(d) {
+    let file_item = $(d).find('.location-info').text();
+
+    $.ajax({
+        url: getItemContentUrl + "?file=" + file_item,
+        type: 'GET',
+        dataType: 'json',
+        success: function (resultData) {
+            $("#js-file-name").text(file_item.trim().substr(1));
+            $('#js-editor-text').text(resultData['content']);
+            $('#modelCKEditor').modal('show');
+        },
+        error: function (resultData) {
+            alert(resultData.responseJSON['content']);
+        }
+    });
+}
+
+function update_item_text(d) {
+    let file_item = $("#js-file-name").text().trim();
+    let content = $("#js-editor-text").text();
+
+    $.ajax({
+        url: updateItemContentUrl,
+        type: 'POST',
+        dataType: 'json',
+        data: {
+            "file": file_item,
+            "content": content
+        },
+        success: function (resultData) {
+            $('#modelCKEditor').modal('hide');
+        },
+        error: function (resultData) {
+            alert(resultData)
+        }
+    });
 }
 
 // back top folder
@@ -227,7 +273,7 @@ function download_files() {
 function rename_file_onfocus(d) {
     $(d).parent().find('.rename-input').removeClass('hidden');
     $(d).parent().find('.rename-input').focus();
-    $(d).toggleClass('hidden');
+    $(d).removeClass('hidden');
 }
 
 // rename item focusout
@@ -240,7 +286,7 @@ function rename_file_onfocusout(d) {
 
     if (file.trim() === new_name.trim()) {
         $(d).parent().find('.pb-filemng-paragraphs').removeClass('hidden');
-        $(d).toggleClass('hidden');
+        $(d).addClass('hidden');
         return
     }
 
@@ -252,11 +298,11 @@ function rename_file_onfocusout(d) {
         success: function (resultData) {
             $(d).parent().find('.pb-filemng-paragraphs').html(resultData);
             $(d).parent().find('.pb-filemng-paragraphs').removeClass('hidden');
-            $(d).toggleClass('hidden');
+            $(d).addClass('hidden');
         },
         error: function (resultData) {
             $(d).parent().find('.pb-filemng-paragraphs').removeClass('hidden');
-            $(d).toggleClass('hidden');
+            $(d).addClass('hidden');
         }
     });
 }
@@ -283,11 +329,13 @@ function move_file(loc, file_list) {
         data: data,
         success: function (resultData) {
             get_files($('#location').attr("data-location"));
+            refresh_folder();
         },
         error: function (result) {
             //
         }
     });
+    refresh_folder();
 }
 
 
@@ -370,7 +418,7 @@ $(function () {
                         ${file.name}
                     </a>
                     `;
-
+                    $('#collapseUpload').collapse("hide")
                 },
                 error: function (resultData) {
                     document.getElementById("js-upload-finished-list").innerHTML +=
