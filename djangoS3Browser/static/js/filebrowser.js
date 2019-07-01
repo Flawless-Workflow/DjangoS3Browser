@@ -208,10 +208,12 @@ function get_files(main_folder) {
     selected_file_list = [];
     $('#top_folder').attr("data-top_folder", $('#location').attr("data-location"));
     $('#location').attr("data-location", main_folder);
-    $(".pb-filemng-template-body").empty();
     var get_files_url = getFolderItemsUrl.replace(/arg1djs3server/, main_folder.toString()).replace(/sort_a_z/, sort_a_z_value);
     $.getJSON(
         get_files_url, function (files_list) {
+
+            $(".pb-filemng-template-body").empty();
+
             for (var key in files_list) {
                 target = "";
                 if ('folder' != files_list[key].type) {
@@ -305,11 +307,12 @@ function rename_file_onfocusout(d) {
             $(d).addClass('hidden');
         }
     });
+    refresh_folder();
 }
 
 function rename_file_onkeypress(d, e) {
     if (e.keyCode === 13) { //enter
-        rename_file_onfocusout(d)
+        rename_file_onfocusout(d);
         reset_selected();
     } else if (e.keyCode === 27) { //esc
         $(d).parent().find('.pb-filemng-paragraphs').removeClass('hidden');
