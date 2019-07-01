@@ -30,8 +30,6 @@ pip install git+https://github.com/initflow/DjangoS3Browser
 
 Then, make the necessary configurations for the `Boto 3 <https://github.com/boto/boto3>`_ library:
 
-.. code-block:: python
-
 
     AWS_ACCESS_KEY_ID = "AWS_ACCESS_KEY_ID"
     AWS_SECRET_ACCESS_KEY = "AWS_SECRET_ACCESS_KEY"
@@ -56,17 +54,15 @@ Then, make the necessary configurations for the `Boto 3 <https://github.com/boto
 
 Next, add to TEMPLATES['OPTIONS'] in settings.py:
 
-.. code-block:: python
 
-
-        'libraries': {
-            's3-load': 'djangoS3Browser.templatetags.s3-tags',
-        },
+    'libraries': {
+        's3-load': 'djangoS3Browser.templatetags.s3-tags',
+    },
 
 
 Then, add to urls.py before ^admin/:
 
-.. code-block:: python
+
 
 
     url(r'^admin/s3/', include('djangoS3Browser.s3_browser.urls')),
@@ -75,19 +71,16 @@ Then, add to urls.py before ^admin/:
 
 Then, add this to the top of the page you want to add:
 
-.. code-block:: python
-
-
     {% load s3-tags %}
 
 
 Finally, add this to the content of the page you want to add:
-
-.. code-block:: python
 
 
     {% load_s3 %}
 
 
 
-.. image:: https://user-images.githubusercontent.com/5642113/30087574-225e38a8-92aa-11e7-8bf4-4da7a5048812.png
+![][image_browser]
+
+[image_browser]: https://user-images.githubusercontent.com/5642113/30087574-225e38a8-92aa-11e7-8bf4-4da7a5048812.png
