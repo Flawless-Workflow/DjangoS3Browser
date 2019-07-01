@@ -3,7 +3,6 @@ Django S3 File Browser
 
 
 :Info: S3 File Browser For Django.
-:Author: Mehmet KAYKISIZ (http://github.com/mkaykisiz)
 
 
 Django S3 File Browser is a simple web-based object browser for cloud-based blob datastores. Just add as an application
@@ -23,10 +22,10 @@ Quick Start
 -----------
 First, download library:
 
-.. code-block:: sh
+```bash
+pip install git+https://github.com/initflow/DjangoS3Browser
+```
 
-
-    pip install djangoS3Browser
 
 
 Then, make the necessary configurations for the `Boto 3 <https://github.com/boto/boto3>`_ library:
@@ -39,6 +38,8 @@ Then, make the necessary configurations for the `Boto 3 <https://github.com/boto
     AWS_STORAGE_BUCKET_NAME = "AWS_STORAGE_BUCKET_NAME"
     AWS_AUTO_CREATE_BUCKET = True
     AWS_QUERYSTRING_AUTH = False
+    
+    AWS_ENDPOINT_URL = None if use Amazon servers or http://<endpoint>:<port>
 
 
     # AWS cache settings, don't change unless you know what you're doing:
@@ -52,13 +53,6 @@ Then, make the necessary configurations for the `Boto 3 <https://github.com/boto
     }
 
 
-Next, do to Django S3 File Browser configuration:
-
-.. code-block:: python
-
-
-    S3_BROWSER_SETTINGS = "djangoS3Browser"
-
 
 Next, add to TEMPLATES['OPTIONS'] in settings.py:
 
@@ -70,12 +64,13 @@ Next, add to TEMPLATES['OPTIONS'] in settings.py:
         },
 
 
-Then, add to urls.py:
+Then, add to urls.py before ^admin/:
 
 .. code-block:: python
 
 
-    url(r'^' + settings.S3_BROWSER_SETTINGS + '/', include('djangoS3Browser.s3_browser.urls')),
+    url(r'^admin/s3/', include('djangoS3Browser.s3_browser.urls')),
+    url(r'^admin/', admin.site.urls),
 
 
 Then, add this to the top of the page you want to add:
