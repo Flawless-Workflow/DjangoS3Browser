@@ -165,7 +165,7 @@ function edit_item(d) {
 }
 
 function update_item_text(d) {
-    let file_item = $("#js-file-name").text().trim();
+    let file_item = '-' + $("#js-file-name").text().trim();
     let content = $("#js-editor-text").text();
 
     $.ajax({
@@ -328,8 +328,7 @@ function move_file(loc, file_list) {
         dataType: 'json',
         data: data,
         success: function (resultData) {
-            get_files($('#location').attr("data-location"));
-            refresh_folder();
+            // get_files($('#location').attr("data-location"));
         },
         error: function (result) {
             //

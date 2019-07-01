@@ -93,8 +93,21 @@ def update_item_content(request):
     file: str = request.POST.get('file')
     content: str = request.POST.get('content')
 
-    delete([file])
-    upload_file_content(file, content)
+    tmp_name = file + '.tmp'
+
+    """
+    Save file in case if uploading new content failed
+    """
+    rename(get_location(file), file, tmp_name)
+
+    try:
+        upload_file_content(file, content)
+    except Exception as e:
+        # reverse file from tmp
+        rename(get_location(file), tmp_name, file)
+        return HttpResponse(json.dumps("ERROR"), content_type="application/json", status=500)
+    else:
+        delete([tmp_name])
 
     return HttpResponse(json.dumps("OK"), content_type="application/json", status=200)
 

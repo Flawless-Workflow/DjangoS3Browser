@@ -6,39 +6,12 @@
 {% load i18n %}
 
 {% block extrahead %}
-    <title>Title</title>
-    <script src="https://code.jquery.com/jquery-2.2.4.min.js"
-            integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44="
-            crossorigin="anonymous"></script>
+    <title>S3 File Browser</title>
 
-    <!-- you need to include the shieldui css and js assets in order for the charts to work -->
-    <link rel="stylesheet" type="text/css"
-          href="http://www.shieldui.com/shared/components/latest/css/light-bootstrap/all.min.css"/>
-    <script type="text/javascript"
-            src="http://www.shieldui.com/shared/components/latest/js/shieldui-all.min.js"></script>
-    <!-- main -->
-    <link rel="stylesheet" type="text/css" href="{% static "css/filebrowser.css" %}"/>
+    {% load_s3_header %}
 
-    <script src="{% static "js/filebrowser.js" %}"></script>
-
-    <!-- Latest compiled and minified CSS -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.8.2/css/all.css" crossorigin="anonymous">
-
-    <script src="https://kit.fontawesome.com/0e2e3dde59.js"></script>
-
-    <!-- Latest compiled and minified CSS -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
-          integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
-
-    <!-- Latest compiled and minified JavaScript -->
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
-            integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
-            crossorigin="anonymous"></script>
 {% endblock %}
 
-
-
-<!-- Place for file manager -->
 
 {% block content %}
 

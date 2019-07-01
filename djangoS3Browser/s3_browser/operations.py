@@ -43,6 +43,17 @@ def strip_str(s: str) -> Optional[str]:
     return s.replace('\n', '').replace('\t', '').strip(' ') if s else s
 
 
+def remove_start(s: str) -> str:
+    return s[1:] if s.startswith('-') else s
+
+
+def get_location(s: str) -> str:
+    if '/' in s:
+        return s.rsplit('/', 0) if not s.endswith('/') else s
+    else:
+        return '-'
+
+
 def get_folder_with_items(main_folder, sort_a_z):
     try:
         main_folder = strip_str(main_folder)
@@ -61,7 +72,7 @@ def get_files(main_folder, result, sort_a_z):
         files_list = []
         for obj in result:
             # main_folder[1:] exp; -folder1/folder2 => delete "-"
-            if main_folder[1:] != obj.get('Key'):  # if obj is not folder item
+            if remove_start(main_folder) != obj.get('Key'):  # if obj is not folder item
                 object_url = urljoin(
                     ENDPOINT_URL,
                     "{0}/{1}".format(settings.AWS_STORAGE_BUCKET_NAME, obj.get('Key'))
@@ -110,7 +121,7 @@ def get_folders(main_folder, result, sort_a_z):
 def upload_file(location: str, file):
     try:
         location = strip_str(location)
-        s3client.put_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=location[1:] + file.name, Body=file)
+        s3client.put_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=remove_start(location) + file.name, Body=file)
     except Exception as e:
         print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
         raise Exception('Upload Failed! ', e)
@@ -118,7 +129,7 @@ def upload_file(location: str, file):
 
 def upload_file_content(file_name: str, content: str):
     try:
-        file_name = strip_str(file_name)[1:]
+        file_name = remove_start(strip_str(file_name))
         body = content.encode()
         s3client.put_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=file_name, Body=body)
     except Exception as e:
@@ -133,7 +144,7 @@ def create_folder_item(location: str, folder_name: str):
 
         if folder_name[-1] != "/":
             folder_name += "/"
-        s3client.put_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=location[1:] + folder_name,
+        s3client.put_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=remove_start(location) + folder_name,
                             ACL="public-read")
     except Exception as e:
         print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
@@ -142,7 +153,7 @@ def create_folder_item(location: str, folder_name: str):
 
 def download_file(file: str):
     try:
-        file = strip_str(file)[1:]
+        file = remove_start(strip_str(file))
         response = s3client.get_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=file)
         return response
     except Exception as e:
@@ -153,8 +164,8 @@ def download_file(file: str):
 def rename(location: str, file: str, new_name: str):
     try:
         location = strip_str(location)
-        file = strip_str(file)
-        new_name = strip_str(new_name)
+        file = remove_start(strip_str(file))
+        new_name = remove_start(strip_str(new_name))
 
         if file[-1] == "/" and new_name[-1] != "/":  # if file format exception
             new_name += "/"
@@ -163,13 +174,21 @@ def rename(location: str, file: str, new_name: str):
             """
             If rename canceled or name not changed
             """
-            return location[1:] + file
+            return remove_start(location) + file
 
-        s3client.copy_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, ACL="public-read",
-                             CopySource={'Bucket': settings.AWS_STORAGE_BUCKET_NAME, 'Key': location[1:] + file},
-                             Key=new_name)
-        s3client.delete_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=location[1:] + file)
-        return location[1:] + new_name
+        s3client.copy_object(
+            Bucket=settings.AWS_STORAGE_BUCKET_NAME, ACL="public-read",
+            CopySource={
+                'Bucket': settings.AWS_STORAGE_BUCKET_NAME,
+                'Key': remove_start(location) + file
+            },
+            Key=new_name,
+        )
+        s3client.delete_object(
+            Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+            Key=remove_start(location) + file,
+        )
+        return remove_start(location) + new_name
     except Exception as e:
         print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
         raise Exception('Rename Failed! ', e)
@@ -178,10 +197,15 @@ def rename(location: str, file: str, new_name: str):
 def paste(location, file_list):
     try:
         for file in file_list:
-            file = strip_str(file)[1:]
-            s3client.copy_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, ACL="public-read",
-                                 CopySource={'Bucket': settings.AWS_STORAGE_BUCKET_NAME, 'Key': file},
-                                 Key=location[1:] + file.rsplit('/', 1)[-1])
+            file = remove_start(strip_str(file))
+            s3client.copy_object(
+                Bucket=settings.AWS_STORAGE_BUCKET_NAME, ACL="public-read",
+                CopySource={
+                    'Bucket': settings.AWS_STORAGE_BUCKET_NAME,
+                    'Key': file
+                },
+                Key=remove_start(location) + file.rsplit('/', 1)[-1],
+            )
     except Exception as e:
         print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
         raise Exception('Paste Failed! ', e)
@@ -190,12 +214,31 @@ def paste(location, file_list):
 def move(location, file_list):
     try:
         for file in file_list:
-            file = strip_str(file)[1:]
+            file = remove_start(strip_str(file))
 
-            s3client.copy_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, ACL="public-read",
-                                 CopySource={'Bucket': settings.AWS_STORAGE_BUCKET_NAME, 'Key': file},
-                                 Key=location[1:] + file.rsplit('/', 1)[-1])
-            s3client.delete_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=file)
+            if file.endswith('/'):
+                to_file = remove_start(location) + file.rsplit('/', 2)[-2] + '/'
+            else:
+                to_file = remove_start(location) + file.rsplit('/', 1)[-1]
+
+            if file == to_file:
+                """
+                Move self in self
+                """
+                continue
+
+            s3client.copy_object(
+                Bucket=settings.AWS_STORAGE_BUCKET_NAME, ACL="public-read",
+                CopySource={
+                    'Bucket': settings.AWS_STORAGE_BUCKET_NAME,
+                    'Key': file
+                },
+                Key=to_file,
+            )
+            s3client.delete_object(
+                Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+                Key=file,
+            )
     except Exception as e:
         print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
         raise Exception('Move Failed! ', e)
@@ -204,7 +247,7 @@ def move(location, file_list):
 def delete(file_list):
     try:
         for file in file_list:
-            file = strip_str(file)[1:]
+            file = remove_start(strip_str(file))
             s3.Bucket(settings.AWS_STORAGE_BUCKET_NAME).objects.filter(Prefix=file).delete()
     except Exception as e:
         print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
