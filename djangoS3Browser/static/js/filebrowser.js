@@ -155,7 +155,7 @@ function edit_item(d) {
         dataType: 'json',
         success: function (resultData) {
             $("#js-file-name").text(file_item.trim().substr(1));
-            $('#js-editor-text').text(resultData['content']);
+            $('#js-editor-text').val(resultData['content']);
             $('#modelCKEditor').modal('show');
         },
         error: function (resultData) {
@@ -166,7 +166,7 @@ function edit_item(d) {
 
 function update_item_text(d) {
     let file_item = '-' + $("#js-file-name").text().trim();
-    let content = $("#js-editor-text").text();
+    let content = $("#js-editor-text").val();
 
     $.ajax({
         url: updateItemContentUrl,
