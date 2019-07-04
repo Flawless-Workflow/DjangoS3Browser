@@ -301,13 +301,14 @@ function rename_file_onfocusout(d) {
             $(d).parent().find('.pb-filemng-paragraphs').html(resultData);
             $(d).parent().find('.pb-filemng-paragraphs').removeClass('hidden');
             $(d).addClass('hidden');
+            refresh_folder();
         },
         error: function (resultData) {
             $(d).parent().find('.pb-filemng-paragraphs').removeClass('hidden');
             $(d).addClass('hidden');
+            refresh_folder();
         }
     });
-    refresh_folder();
 }
 
 function rename_file_onkeypress(d, e) {
