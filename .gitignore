@@ -7,3 +7,5 @@
 .env.local
 
 .idea/
+.vscode/
+DjangoS3Browser.egg-info/
