@@ -14,15 +14,19 @@ Including another URLconf
     2. Import the include() function: from django.conf.urls import url, include
     3. Add a URL to urlpatterns:  url(r'^blog/', include(blog_urls))
 """
-from django.conf.urls import url
 from django.conf.urls.static import static
 from django.contrib.admin.views.decorators import staff_member_required
-
+from django.urls import re_path
 from djangoS3Browser.s3_browser import settings
 from djangoS3Browser.s3_browser import views
 
 urlpatterns = [
-    url(r'^get_folder_items/(.+)/(.+)/$', staff_member_required(views.get_folder_items), name='get_folder_items'),
+    re_path(
+        r"^s3/folder/(?P<main_folder>)/(?P<sort_a_z>/)$",
+        views.get_folder_items,
+        name="folder-items",
+    ),
+    
     url(r'^upload/$', staff_member_required(views.upload), name='upload'),
     url(r'^create_folder/$', staff_member_required(views.create_folder), name='create_folder'),
 

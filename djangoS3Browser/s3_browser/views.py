@@ -4,14 +4,40 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 
+from djangoS3Browser.s3_browser.operations import get_folder_with_items
+from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiParameter
+from drf_spectacular.types import OpenApiTypes
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
 from .operations import *
+from .serializers import *
 
 "fetch the directories within the selected folder"
 
-
+@extend_schema(
+    responses={200: FileSerializer(many=True)},
+    parameters=[
+        OpenApiParameter(
+            name="main_folder",
+            type=OpenApiTypes.STR,
+            description=(
+                "The main folder to get the items from. " "Always starts with '-'."
+            ),
+            location=OpenApiParameter.PATH,
+        )
+    ],
+)
+@api_view(["get"])
 def get_folder_items(request, main_folder, sort_a_z):
-    json_string = get_folder_with_items(main_folder, sort_a_z)
-    return HttpResponse(json.dumps(json_string), content_type="application/json")
+    """
+    Get folder items
+    """
+    data = get_folder_with_items(main_folder, sort_a_z)
+    serializer = FileSerializer(data, many=True)
+
+    return Response(serializer.initial_data)
+
 
 
 @csrf_exempt
