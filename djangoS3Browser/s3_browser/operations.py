@@ -2,7 +2,7 @@ from typing import Optional, List, Dict
 
 import boto3
 import sys
-
+import logging
 from urllib.parse import urljoin
 
 try:
@@ -11,22 +11,26 @@ except ImportError:
     from io import StringIO
 
 from django.conf import settings
+from .exceptions import FileException
+
+logger = logging.getLogger(__name__)
 
 """
 If variable defined, will be use custom endpoint, else will be used Amazon endpoints
 """
-ENDPOINT_URL = getattr(settings, 'AWS_ENDPOINT_URL', None)
+ENDPOINT_URL = getattr(settings, "AWS_ENDPOINT_URL", None)
 
 s3 = boto3.resource(
-    's3', aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-    endpoint_url=ENDPOINT_URL
-)
-s3client = boto3.client(
-    's3',
+    "s3",
     aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
     aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-    endpoint_url=ENDPOINT_URL
+    endpoint_url=ENDPOINT_URL,
+)
+s3client = boto3.client(
+    "s3",
+    aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+    endpoint_url=ENDPOINT_URL,
 )
 
 bucket = s3.Bucket(settings.AWS_STORAGE_BUCKET_NAME)
@@ -40,7 +44,7 @@ Big Note: for [1:]
 
 
 def strip_str(s: str) -> Optional[str]:
-    return s.replace('\n', '').replace('\t', '').strip(' ') if s else s
+    return s.replace("\n", "").replace("\t", "").strip(" ") if s else s
 
 
 def remove_start(s: str) -> str:
@@ -49,7 +53,7 @@ def remove_start(s: str) -> str:
     :param s:
     :return:
     """
-    return s[1:] if s.startswith('-') else s
+    return s[1:] if s.startswith("-") else s
 
 
 def get_path(base, file):
@@ -63,13 +67,13 @@ def get_location(s: str) -> str:
     :return:
     """
     loc = s
-    if '/' in s:
-        loc = s.rsplit('/', 1)[0] if not s.endswith('/') else s
+    if "/" in s:
+        loc = s.rsplit("/", 1)[0] if not s.endswith("/") else s
 
-        if not loc.endswith('/'):
-            loc += '/'
+        if not loc.endswith("/"):
+            loc += "/"
     else:
-        loc = '-'
+        loc = "-"
 
     return loc
 
@@ -80,11 +84,11 @@ def get_file_name(s: str) -> Optional[str]:
     :param s:
     :return:
     """
-    if s.endswith('/'):
+    if s.endswith("/"):
         raise ValueError("s is not file path")
 
-    if '/' in s:
-        return s.rsplit('/', 1)[1]
+    if "/" in s:
+        return s.rsplit("/", 1)[1]
     else:
         return remove_start(s)
 
@@ -99,16 +103,34 @@ def get_folder_with_items(main_folder: str, sort_a_z: bool = False) -> List:
     try:
         main_folder = strip_str(main_folder)
         sort_a_z = True if sort_a_z == "true" else False  # sorted method a to z/ z to a
-        result = s3client.list_objects(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Prefix=main_folder[1:], Delimiter="/")
-        result_files = get_files(main_folder, result.get('Contents'), sort_a_z) if result.get('Contents') else []
-        result_folders = get_folders(main_folder, result.get('CommonPrefixes'), sort_a_z) if result.get(
-            'CommonPrefixes') else []
+        result = s3client.list_objects(
+            Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+            Prefix=main_folder[1:],
+            Delimiter="/",
+        )
+        result_files = (
+            get_files(main_folder, result.get("Contents"), sort_a_z)
+            if result.get("Contents")
+            else []
+        )
+        result_folders = (
+            get_folders(main_folder, result.get("CommonPrefixes"), sort_a_z)
+            if result.get("CommonPrefixes")
+            else []
+        )
         return result_folders + result_files  # return files and folders
-    except Exception as e:
-        print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
+    except Exception as err:
+        logger.debug(
+            "Error on line {}".format(sys.exc_info()[-1].tb_lineno),
+            type(err).__name__,
+            err,
+        )
+        raise FileException(detail=err)
 
 
-def get_files(main_folder: str, result: List, sort_a_z: bool = False) -> List[Dict[str, str]]:
+def get_files(
+    main_folder: str, result: List, sort_a_z: bool = False
+) -> List[Dict[str, str]]:
     """
     Get Files in current folder
     :param main_folder: str
@@ -120,38 +142,119 @@ def get_files(main_folder: str, result: List, sort_a_z: bool = False) -> List[Di
         files_list = []
         for obj in result:
             # main_folder[1:] exp; -folder1/folder2 => delete "-"
-            if remove_start(main_folder) != obj.get('Key'):  # if obj is not folder item
+            if remove_start(main_folder) != obj.get("Key"):  # if obj is not folder item
                 object_url = urljoin(
                     ENDPOINT_URL,
-                    "{0}/{1}".format(settings.AWS_STORAGE_BUCKET_NAME, obj.get('Key'))
+                    "{0}/{1}".format(settings.AWS_STORAGE_BUCKET_NAME, obj.get("Key")),
                 )
                 # for template file icon
                 icon_list = [
-                    'ai.png', 'audition.png', 'avi.png', 'bridge.png', 'css.png', 'csv.png', 'dbf.png', 'doc.png',
-                    'dreamweaver.png', 'dwg.png', 'exe.png', 'file.png', 'fireworks.png', 'fla.png', 'flash.png',
-                    'folder_icon.png', 'html.png', 'illustrator.png', 'indesign.png', 'iso.png', 'javascript.png',
-                    'jpg.png', 'json-file.png', 'mp3.png', 'mp4.png', 'pdf.png', 'photoshop.png', 'png.png',
-                    'ppt.png', 'prelude.png', 'premiere.png', 'psd.png', 'rtf.png', 'search.png', 'svg.png',
-                    'txt.png', 'xls.png', 'xml.png', 'zip.png', 'zip-1.png']
-                img_file_list = ['ani', 'bmp', 'cal', 'fax', 'gif', 'img', 'jbg', 'jpg', 'jpe', 'mac', 'pbm',
-                                 'pcd', 'pcx', 'pct', 'pgm', 'png', 'jpeg', 'ppm', 'psd', 'ras', 'tag', 'tif',
-                                 'wmf']
-                extension, icon = str(obj['Key'].split('.')[-1]).lower(), None
+                    "ai.png",
+                    "audition.png",
+                    "avi.png",
+                    "bridge.png",
+                    "css.png",
+                    "csv.png",
+                    "dbf.png",
+                    "doc.png",
+                    "dreamweaver.png",
+                    "dwg.png",
+                    "exe.png",
+                    "file.png",
+                    "fireworks.png",
+                    "fla.png",
+                    "flash.png",
+                    "folder_icon.png",
+                    "html.png",
+                    "illustrator.png",
+                    "indesign.png",
+                    "iso.png",
+                    "javascript.png",
+                    "jpg.png",
+                    "json-file.png",
+                    "mp3.png",
+                    "mp4.png",
+                    "pdf.png",
+                    "photoshop.png",
+                    "png.png",
+                    "ppt.png",
+                    "prelude.png",
+                    "premiere.png",
+                    "psd.png",
+                    "rtf.png",
+                    "search.png",
+                    "svg.png",
+                    "txt.png",
+                    "xls.png",
+                    "xml.png",
+                    "zip.png",
+                    "zip-1.png",
+                ]
+                img_file_list = [
+                    "ani",
+                    "bmp",
+                    "cal",
+                    "fax",
+                    "gif",
+                    "img",
+                    "jbg",
+                    "jpg",
+                    "jpe",
+                    "mac",
+                    "pbm",
+                    "pcd",
+                    "pcx",
+                    "pct",
+                    "pgm",
+                    "png",
+                    "jpeg",
+                    "ppm",
+                    "psd",
+                    "ras",
+                    "tag",
+                    "tif",
+                    "wmf",
+                ]
+                extension, icon = str(obj["Key"].split(".")[-1]).lower(), None
                 if extension in img_file_list:
-                    icon = object_url if extension in ['bmp', 'jpg', 'jpeg', 'png',
-                                                       'gif'] else "/static/images/jpg.png"
+                    icon = (
+                        object_url
+                        if extension in ["bmp", "jpg", "jpeg", "png", "gif"]
+                        else "/static/images/jpg.png"
+                    )
                 if not icon:
-                    icon = "/static/images/" + extension + ".png" if extension + ".png" in icon_list else "/static/images/file.png"
-                item_type = "folder" if obj.get('Key')[-1] == "/" else "other"  # for show template
+                    icon = (
+                        "/static/images/" + extension + ".png"
+                        if extension + ".png" in icon_list
+                        else "/static/images/file.png"
+                    )
+                item_type = (
+                    "folder" if obj.get("Key")[-1] == "/" else "other"
+                )  # for show template
                 files_list.append(
-                    {'key': obj.get('Key'), 'url': object_url, 'icon': icon,
-                     'text': obj.get('Key')[len(main_folder) - 1:], 'type': item_type})
-        return sorted(files_list, key=lambda k: str(k['key']).lower(), reverse=not sort_a_z)
-    except Exception as e:
-        print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
+                    {
+                        "key": obj.get("Key"),
+                        "url": object_url,
+                        "icon": icon,
+                        "text": obj.get("Key")[len(main_folder) - 1 :],
+                        "type": item_type,
+                    }
+                )
+        return sorted(
+            files_list, key=lambda k: str(k["key"]).lower(), reverse=not sort_a_z
+        )
+    except Exception as err:
+        logger.debug(
+            "Error on line {}".format(sys.exc_info()[-1].tb_lineno),
+            type(err).__name__,
+            err,
+        )
+        raise FileException(detail=err)
 
 
-def get_folders(main_folder: str, result: List, sort_a_z: bool = False) -> List[Dict[str, str]]:
+def get_folders(
+    main_folder: str, result: List, sort_a_z: bool = False
+) -> List[Dict[str, str]]:
     """
     Get Folders list
     :param main_folder: str
@@ -164,13 +267,26 @@ def get_folders(main_folder: str, result: List, sort_a_z: bool = False) -> List[
         for obj in result:
             icon = "/static/images/folder_icon.png"
             item_type = "folder"  # for show template
-            url = obj.get('Prefix')
+            url = obj.get("Prefix")
             files_list.append(
-                {'key': obj.get('Prefix'), 'url': url, 'icon': icon,
-                 'text': obj.get('Prefix')[len(main_folder) - 1:], 'type': item_type})
-        return sorted(files_list, key=lambda k: str(k['key']).lower(), reverse=not sort_a_z)
-    except Exception as e:
-        print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
+                {
+                    "key": obj.get("Prefix"),
+                    "url": url,
+                    "icon": icon,
+                    "text": obj.get("Prefix")[len(main_folder) - 1 :],
+                    "type": item_type,
+                }
+            )
+        return sorted(
+            files_list, key=lambda k: str(k["key"]).lower(), reverse=not sort_a_z
+        )
+    except Exception as err:
+        logger.debug(
+            "Error on line {}".format(sys.exc_info()[-1].tb_lineno),
+            type(err).__name__,
+            err,
+        )
+        raise FileException(detail=err)
 
 
 def upload_file(location: str, file) -> None:
@@ -185,11 +301,15 @@ def upload_file(location: str, file) -> None:
         s3client.put_object(
             Bucket=settings.AWS_STORAGE_BUCKET_NAME,
             Key=urljoin(remove_start(location), file.name),
-            Body=file
+            Body=file,
         )
-    except Exception as e:
-        print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
-        raise Exception('Upload Failed! ', e)
+    except Exception as err:
+        logger.debug(
+            "Error on line {}".format(sys.exc_info()[-1].tb_lineno),
+            type(err).__name__,
+            err,
+        )
+        raise FileException(detail=err)
 
 
 def upload_file_content(file_name: str, content: str) -> None:
@@ -202,10 +322,16 @@ def upload_file_content(file_name: str, content: str) -> None:
     try:
         file_name = remove_start(strip_str(file_name))
         body = content.encode()
-        s3client.put_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=file_name, Body=body)
-    except Exception as e:
-        print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
-        raise Exception('Upload Failed! ', e)
+        s3client.put_object(
+            Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=file_name, Body=body
+        )
+    except Exception as err:
+        logger.debug(
+            "Error on line {}".format(sys.exc_info()[-1].tb_lineno),
+            type(err).__name__,
+            err,
+        )
+        raise FileException(detail=err)
 
 
 def create_folder_item(location: str, folder_name: str) -> None:
@@ -224,11 +350,15 @@ def create_folder_item(location: str, folder_name: str) -> None:
         s3client.put_object(
             Bucket=settings.AWS_STORAGE_BUCKET_NAME,
             Key=urljoin(remove_start(location), folder_name),
-            ACL="public-read"
+            ACL="public-read",
         )
-    except Exception as e:
-        print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
-        raise Exception('Create Folder Failed! ', e)
+    except Exception as err:
+        logger.debug(
+            "Error on line {}".format(sys.exc_info()[-1].tb_lineno),
+            type(err).__name__,
+            err,
+        )
+        raise FileException(detail=err)
 
 
 def download_file(file: str):
@@ -239,12 +369,17 @@ def download_file(file: str):
     """
     try:
         file = remove_start(strip_str(file))
-        response = s3client.get_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=file)
+        response = s3client.get_object(
+            Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=file
+        )
         return response
-    except Exception as e:
-        print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
-        raise Exception('Download Failed! ', e)
-
+    except Exception as err:
+        logger.debug(
+            "Error on line {}".format(sys.exc_info()[-1].tb_lineno),
+            type(err).__name__,
+            err,
+        )
+        raise FileException(detail=err)
 
 def rename(location: str, file: str, new_name: str) -> str:
     """
@@ -269,10 +404,11 @@ def rename(location: str, file: str, new_name: str) -> str:
             return urljoin(location, file)
 
         s3client.copy_object(
-            Bucket=settings.AWS_STORAGE_BUCKET_NAME, ACL="public-read",
+            Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+            ACL="public-read",
             CopySource={
-                'Bucket': settings.AWS_STORAGE_BUCKET_NAME,
-                'Key': urljoin(location, file),
+                "Bucket": settings.AWS_STORAGE_BUCKET_NAME,
+                "Key": urljoin(location, file),
             },
             Key=urljoin(location, new_name),
         )
@@ -281,9 +417,11 @@ def rename(location: str, file: str, new_name: str) -> str:
             Key=urljoin(location, file),
         )
         return urljoin(location, new_name)
-    except Exception as e:
-        print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
-        raise Exception('Rename Failed! ', e)
+    except Exception as err:
+        logger.debug(
+            "Error on line {}".format(sys.exc_info()[-1].tb_lineno), type(err).__name__, err
+        )
+        raise FileException(detail=err)
 
 
 def paste(location: str, file_list: List[str]):
@@ -297,16 +435,16 @@ def paste(location: str, file_list: List[str]):
         for file in file_list:
             file = remove_start(strip_str(file))
             s3client.copy_object(
-                Bucket=settings.AWS_STORAGE_BUCKET_NAME, ACL="public-read",
-                CopySource={
-                    'Bucket': settings.AWS_STORAGE_BUCKET_NAME,
-                    'Key': file
-                },
-                Key=urljoin(remove_start(location), file.rsplit('/', 1)[-1]),
+                Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+                ACL="public-read",
+                CopySource={"Bucket": settings.AWS_STORAGE_BUCKET_NAME, "Key": file},
+                Key=urljoin(remove_start(location), file.rsplit("/", 1)[-1]),
             )
-    except Exception as e:
-        print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
-        raise Exception('Paste Failed! ', e)
+    except Exception as err:
+        logger.debug(
+            "Error on line {}".format(sys.exc_info()[-1].tb_lineno), type(err).__name__, err
+        )
+        raise FileException(detail=err)
 
 
 def move(location: str, file_list: List[str]):
@@ -320,10 +458,10 @@ def move(location: str, file_list: List[str]):
         for file in file_list:
             file = remove_start(strip_str(file))
 
-            if file.endswith('/'):
-                to_file = urljoin(remove_start(location), file.rsplit('/', 2)[-2] + '/')
+            if file.endswith("/"):
+                to_file = urljoin(remove_start(location), file.rsplit("/", 2)[-2] + "/")
             else:
-                to_file = urljoin(remove_start(location), file.rsplit('/', 1)[-1])
+                to_file = urljoin(remove_start(location), file.rsplit("/", 1)[-1])
 
             if file == to_file:
                 """
@@ -332,20 +470,20 @@ def move(location: str, file_list: List[str]):
                 continue
 
             s3client.copy_object(
-                Bucket=settings.AWS_STORAGE_BUCKET_NAME, ACL="public-read",
-                CopySource={
-                    'Bucket': settings.AWS_STORAGE_BUCKET_NAME,
-                    'Key': file
-                },
+                Bucket=settings.AWS_STORAGE_BUCKET_NAME,
+                ACL="public-read",
+                CopySource={"Bucket": settings.AWS_STORAGE_BUCKET_NAME, "Key": file},
                 Key=to_file,
             )
             s3client.delete_object(
                 Bucket=settings.AWS_STORAGE_BUCKET_NAME,
                 Key=file,
             )
-    except Exception as e:
-        print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
-        raise Exception('Move Failed! ', e)
+    except Exception as err:
+        logger.debug(
+            "Error on line {}".format(sys.exc_info()[-1].tb_lineno), type(err).__name__, err
+        )
+        raise FileException(detail=err)
 
 
 def delete(file_list: List[str]) -> None:
@@ -357,7 +495,11 @@ def delete(file_list: List[str]) -> None:
     try:
         for file in file_list:
             file = remove_start(strip_str(file))
-            s3.Bucket(settings.AWS_STORAGE_BUCKET_NAME).objects.filter(Prefix=file).delete()
-    except Exception as e:
-        print('Error on line {}'.format(sys.exc_info()[-1].tb_lineno), type(e).__name__, e)
-        raise Exception('Delete Failed! ', e)
+            s3.Bucket(settings.AWS_STORAGE_BUCKET_NAME).objects.filter(
+                Prefix=file
+            ).delete()
+    except Exception as err:
+        logger.debug(
+            "Error on line {}".format(sys.exc_info()[-1].tb_lineno), type(err).__name__, err
+        )
+        raise FileException(detail=err)
