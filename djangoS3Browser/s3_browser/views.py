@@ -46,6 +46,17 @@ def upload(request):
     upload_file(request.POST['loc'], file)
     return HttpResponse(json.dumps(file.name), content_type="application/json", status=200)
 
+@extend_schema(
+    responses={200: BucketSerializer(many=True)},
+)
+@api_view(["get"])
+def list_buckets(request):
+    """
+    List buckets
+    """
+    data =get_all_buckets()
+    serializer = BucketSerializer(data, many=True)
+    return Response(data)
 
 @csrf_exempt
 def create_folder(request):

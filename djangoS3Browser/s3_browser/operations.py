@@ -40,6 +40,26 @@ Big Note: for [1:]
 -starts with the default "-" sign for the selected file location.
 """
 
+def get_all_buckets()-> list:
+    """
+    Get all buckets from s3
+    :return:
+    """
+    try:
+        # all_buckets_s3 = s3.resource("s3")
+        buckets = []
+        for bucket in s3.buckets.all():
+            buckets.append({"name" : bucket.name})
+        return buckets
+    except Exception as err:
+        logger.debug(
+            "Error on line {}".format(sys.exc_info()[-1].tb_lineno),
+            type(err).__name__,
+            err,
+        )
+        raise FileException(detail=err)
+
+
 "fetch the directories within the selected folder"
 
 

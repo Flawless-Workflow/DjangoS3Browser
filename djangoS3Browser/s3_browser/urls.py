@@ -27,8 +27,8 @@ urlpatterns = [
         name="folder-items",
     ),
     
-    url(r'^upload/$', staff_member_required(views.upload), name='upload'),
-    url(r'^create_folder/$', staff_member_required(views.create_folder), name='create_folder'),
+    re_path(r'^list-buckets/$', views.list_buckets, name='buckets'),
+    # url(r'^create_folder/$', staff_member_required(views.create_folder), name='create_folder'),
 
     url(r'^download/$', staff_member_required(views.download), name='download'),
     url(r'^get_item/$', staff_member_required(views.get_item), name='get_item'),

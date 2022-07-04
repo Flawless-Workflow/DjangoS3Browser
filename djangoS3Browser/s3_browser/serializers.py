@@ -7,3 +7,6 @@ class FileSerializer(serializers.Serializer):
     icon = serializers.FileField()
     text = serializers.CharField(max_length=255)
     file_type = serializers.CharField(max_length=255)
+
+class BucketSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=255)
