@@ -16,30 +16,27 @@ Including another URLconf
 """
 from django.conf.urls.static import static
 from django.contrib.admin.views.decorators import staff_member_required
-from django.urls import re_path
+from django.urls import path, re_path
 from djangoS3Browser.s3_browser import settings
 from djangoS3Browser.s3_browser import views
 
 urlpatterns = [
     re_path(
-        r"^s3/folder/(?P<main_folder>)/(?P<sort_a_z>/)$",
-        views.get_folder_items,
+        r"folder-items/(?P<main_folder>.+)/(?P<sort_a_z>.+)/",
+        views.GetFolderItemsAPIView.as_view(),
         name="folder-items",
     ),
     
-    re_path(r'^list-buckets/$', views.list_buckets, name='buckets'),
-    # url(r'^create_folder/$', staff_member_required(views.create_folder), name='create_folder'),
+    path('upload/', views.UploadFileAPIView.as_view(), name='upload'),
+    path('buckets/', views.ListBucketsAPIView.as_view(), name='buckets-list'),
+    path('folder/', views.CreateFolderAPIView.as_view(), name='folder-create'),
 
-    url(r'^download/$', staff_member_required(views.download), name='download'),
-    url(r'^get_item/$', staff_member_required(views.get_item), name='get_item'),
-    url(r'^get_item_content/$', staff_member_required(views.get_item_content), name='get_item_content'),
-    url(r'^update_item_content/$', staff_member_required(views.update_item_content), name='update_item_content'),
+    path("download/", views.DownloadFileAPIView.as_view(), name='download'),
 
-    url(r'^rename_file/$', staff_member_required(views.rename_file), name='rename_file'),
-    url(r'^paste_file/$', staff_member_required(views.paste_file), name='paste_file'),
-    url(r'^move_file/$', staff_member_required(views.move_file), name='move_file'),
-    url(r'^delete_file/$', staff_member_required(views.delete_file), name='delete_file'),
-    url(r'', staff_member_required(views.admin_index), name='admin_index')
+    path("rename/", views.RenameFileAPIView.as_view(), name='rename_file'),
+    path("paste/", views.PasteFileAPIView.as_view(), name='paste_file'),
+    path('move/', views.MoveFileAPIView.as_view(), name='move_file'),
+    path('delete/', views.DeleteFileAPIView.as_view(), name='delete_file'),
 ]
 
 urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

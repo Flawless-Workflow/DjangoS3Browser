@@ -4,155 +4,176 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 
-from djangoS3Browser.s3_browser.operations import get_folder_with_items
 from drf_spectacular.utils import extend_schema
 from drf_spectacular.utils import OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .operations import *
+from rest_framework.parsers import FileUploadParser
+from rest_framework import status
+
+from .operations import OperationsMixin
 from .serializers import *
+from .common import OperationView
 
 "fetch the directories within the selected folder"
 
-@extend_schema(
-    responses={200: FileSerializer(many=True)},
-    parameters=[
-        OpenApiParameter(
-            name="main_folder",
-            type=OpenApiTypes.STR,
-            description=(
-                "The main folder to get the items from. " "Always starts with '-'."
-            ),
-            location=OpenApiParameter.PATH,
-        )
-    ],
-)
-@api_view(["get"])
-def get_folder_items(request, main_folder, sort_a_z):
+
+class GetFolderItemsAPIView(OperationView):
+    allowed_methods = ["get"]
+
+    @extend_schema(
+        responses={200: FileSerializer(many=True)},
+        parameters=[
+            OpenApiParameter(
+                name="main_folder",
+                type=OpenApiTypes.STR,
+                description=(
+                    "The main folder to get the items from. " "Always starts with '-'."
+                ),
+                location=OpenApiParameter.PATH,
+            )
+        ],
+    )
+    def get(self, request, main_folder, sort_a_z):
+        """
+        Get folder items
+        """
+        data = self.get_folder_with_items(main_folder, sort_a_z)
+        serializer = FileSerializer(data, many=True)
+
+        return Response(serializer.data)
+
+
+class UploadFileAPIView(OperationView):
+    allowed_methods = ["post"]
+    parser_class = (FileUploadParser,)
+
+    @extend_schema(
+        responses={200: UploadFileSerializer},
+        request=UploadFileSerializer(many=False),
+    )
+    def post(self, request):
+        """
+        Upload file
+        """
+        serializer = UploadFileSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        file = serializer.validated_data.get("file")
+        loc = serializer.validated_data.get("loc")
+        self.upload_file(loc, file)
+        return Response(serializer.data)
+
+
+class ListBucketsAPIView(OperationView):
+    allowed_methods = ["get"]
+
+    @extend_schema(
+        responses={200: BucketSerializer(many=True)},
+    )
+    def get(self, request):
+        """
+        List buckets
+        """
+        data = self.get_all_buckets()
+        serializer = BucketSerializer(data, many=True)
+
+        return Response(serializer.data)
+
+
+class CreateFolderAPIView(OperationView):
+    allowed_methods = ["post"]
+
+    @extend_schema(
+        responses={200: CreateFolderSerializer},
+        request=CreateFolderSerializer(many=False),
+    )
+    def post(self, request):
+        """
+        Create folder
+        """
+        serializer = CreateFolderSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        loc = serializer.validated_data.get("loc")
+        name = serializer.validated_data.get("name")
+        self.create_folder_item(location=loc, folder_name=name)
+        return Response(serializer.data)
+
+
+class DownloadFileAPIView(OperationView):
     """
-    Get folder items
+    Download file from S3 using file key
     """
-    data = get_folder_with_items(main_folder, sort_a_z)
-    serializer = FileSerializer(data, many=True)
 
-    return Response(serializer.initial_data)
+    allowed_methods = ["get"]
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name="file_key", type=OpenApiTypes.STR, location=OpenApiParameter.QUERY
+            )
+        ],
+    )
+    def get(self, request):
+        file_key = request.GET.get("file_key")
+        result = self.download_file(file_key)
+        response = HttpResponse(result["Body"].read())
+        response["Content-Type"] = result["ContentType"]
+        response["Content-Length"] = result["ContentLength"]
+        response["Content-Disposition"] = "attachment; filename=" + file_key
+        response["Accept-Ranges"] = "bytes"
+        return response
 
 
-
-@csrf_exempt
-def upload(request):
-    file = request.FILES.get('file')
-    upload_file(request.POST['loc'], file)
-    return HttpResponse(json.dumps(file.name), content_type="application/json", status=200)
-
-@extend_schema(
-    responses={200: BucketSerializer(many=True)},
-)
-@api_view(["get"])
-def list_buckets(request):
+class RenameFileAPIView(OperationView):
     """
-    List buckets
+    Rename file from S3 using file key
     """
-    data =get_all_buckets()
-    serializer = BucketSerializer(data, many=True)
-    return Response(data)
 
-@csrf_exempt
-def create_folder(request):
-    create_folder_item(request.POST['loc'], request.POST['folder_name'])
-    return HttpResponse(json.dumps("OK"), content_type="application/json", status=200)
+    allowed_methods = ["post"]
 
-
-@csrf_exempt
-def download(request):
-    file = request.GET.get('file')
-    result = download_file(file)
-    response = HttpResponse(result['Body'].read())
-    response['Content-Type'] = result['ContentType']
-    response['Content-Length'] = result['ContentLength']
-    response['Content-Disposition'] = 'attachment; filename=' + file
-    response['Accept-Ranges'] = 'bytes'
-    return response
+    @extend_schema(request=FileRenameSerializer)
+    def post(self, request):
+        serializer = FileRenameSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        loc = serializer.validated_data.get("loc")
+        file = serializer.validated_data.get("old_name")
+        new_name = serializer.validated_data.get("new_name")
+        file_name = self.rename(loc, file, new_name)
+        return Response(status=status.HTTP_200_OK)
 
 
-@csrf_exempt
-def rename_file(request):
-    file_name = rename(request.POST['loc'], request.POST['file'], request.POST['new_name'])
-    return HttpResponse(json.dumps(file_name), content_type="application/json", status=200)
+class PasteFileAPIView(OperationView):
+    allowed_methods = ["post"]
+
+    @extend_schema(request=PasteFileSerializer)
+    def post(self, request):
+        serializer = PasteFileSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        loc = serializer.validated_data.get("loc")
+        file_list = serializer.validated_data.get("file_list")
+        self.paste(loc, file_list)
+        return Response(status=status.HTTP_200_OK)
 
 
-@csrf_exempt
-def paste_file(request):
-    paste(request.POST['loc'], request.POST.getlist('file_list[]'))
-    return HttpResponse(json.dumps("OK"), content_type="application/json", status=200)
+class MoveFileAPIView(OperationView):
+    allowed_methods = ["put"]
+
+    def put(self, request):
+        serializer = PasteFileSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        loc = serializer.validated_data.get("loc")
+        file_list = serializer.validated_data.get("file_list")
+        self.move(loc, file_list)
+        return Response(status=status.HTTP_200_OK)
 
 
-@csrf_exempt
-def move_file(request):
-    move(request.POST['loc'], request.POST.getlist('file_list[]'))
-    return HttpResponse(json.dumps("OK"), content_type="application/json", status=200)
+class DeleteFileAPIView(OperationView):
+    allowed_methods = ["delete"]
 
-
-@csrf_exempt
-def delete_file(request):
-    delete(request.POST.getlist('file_list[]'))
-    return HttpResponse(json.dumps("OK"), content_type="application/json", status=200)
-
-
-@csrf_exempt
-def get_item(request):
-    file = request.GET.get('file')
-    result = download_file(file)
-    response = HttpResponse(result['Body'].read())
-
-    return response
-
-
-@csrf_exempt
-def get_item_content(request):
-    file = request.GET.get('file')
-    result = download_file(file)
-    status = 200
-    try:
-        content = result['Body'].read().decode('utf-8')
-    except Exception as e:
-        content = "Not text"
-        status = 405
-
-    return HttpResponse(json.dumps({
-        "content": content
-    }), content_type="application/json", status=status)
-
-
-@csrf_exempt
-def update_item_content(request):
-    file: str = request.POST.get('file')
-    content: str = request.POST.get('content')
-
-    location = get_location(file)
-    _file = get_file_name(file)
-    tmp_name = _file + '.tmp'
-
-    """
-    Save file in case if uploading new content failed
-    """
-    rename(location, _file, tmp_name)
-
-    try:
-        upload_file_content(
-            file, content
-        )
-    except Exception as e:
-        # reverse file from tmp
-        rename(location, tmp_name, _file)
-        return HttpResponse(json.dumps("ERROR"), content_type="application/json", status=500)
-    else:
-        delete([tmp_name])
-
-    return HttpResponse(json.dumps("OK"), content_type="application/json", status=200)
-
-
-@csrf_exempt
-def admin_index(request):
-    return render(request, 'admin_index.html', {})
+    def delete(self, request):
+        serializer = FileDeleteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        file_list = serializer.validated_data.get("file_list")
+        super().delete(file_list)
+        return Response(status=status.HTTP_204_NO_CONTENT)
