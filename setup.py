@@ -21,7 +21,7 @@ setup(
     install_requires=[
         "Django>=4.0",
         "boto3>=1.9.176",
-        "rest_framework>=3.0",
+        "djangorestframework>=3.7.0",
         "drf-spectacular>=0.22.1",
     ],
 )
