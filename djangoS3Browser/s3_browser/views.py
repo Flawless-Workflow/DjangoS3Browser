@@ -1,18 +1,12 @@
-import json
-
-from django.http import HttpResponse, JsonResponse
-from django.shortcuts import render
-from django.views.decorators.csrf import csrf_exempt
-
+from django.http import HttpResponse
+from django.utils.translation import gettext as _
 from drf_spectacular.utils import extend_schema
 from drf_spectacular.utils import OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
-from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from rest_framework.parsers import FileUploadParser
+from rest_framework.parsers import MultiPartParser
 from rest_framework import status
 
-from .operations import OperationsMixin
 from .serializers import *
 from .common import OperationView
 
@@ -39,6 +33,7 @@ class GetFolderItemsAPIView(OperationView):
         """
         Get folder items
         """
+        self.set_user_bucket()
         data = self.get_folder_with_items(main_folder, sort_a_z)
         serializer = FileSerializer(data, many=True)
 
@@ -47,22 +42,23 @@ class GetFolderItemsAPIView(OperationView):
 
 class UploadFileAPIView(OperationView):
     allowed_methods = ["post"]
-    parser_class = (FileUploadParser,)
+    parser_class = (MultiPartParser,)
 
     @extend_schema(
-        responses={200: UploadFileSerializer},
+        responses={201: _("Uploaded")},
         request=UploadFileSerializer(many=False),
     )
     def post(self, request):
         """
         Upload file
         """
+        self.set_user_bucket()
         serializer = UploadFileSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        file = serializer.validated_data.get("file")
+        file = serializer.validated_data.get("files")
         loc = serializer.validated_data.get("loc")
         self.upload_file(loc, file)
-        return Response(serializer.data)
+        return Response(_("Uploaded"), status=status.HTTP_201_CREATED)
 
 
 class ListBucketsAPIView(OperationView):
@@ -75,6 +71,7 @@ class ListBucketsAPIView(OperationView):
         """
         List buckets
         """
+        self.set_user_bucket()
         data = self.get_all_buckets()
         serializer = BucketSerializer(data, many=True)
 
@@ -92,6 +89,7 @@ class CreateFolderAPIView(OperationView):
         """
         Create folder
         """
+        self.set_user_bucket()
         serializer = CreateFolderSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         loc = serializer.validated_data.get("loc")
@@ -115,6 +113,7 @@ class DownloadFileAPIView(OperationView):
         ],
     )
     def get(self, request):
+        self.set_user_bucket()
         file_key = request.GET.get("file_key")
         result = self.download_file(file_key)
         response = HttpResponse(result["Body"].read())
@@ -134,6 +133,7 @@ class RenameFileAPIView(OperationView):
 
     @extend_schema(request=FileRenameSerializer)
     def post(self, request):
+        self.set_user_bucket()
         serializer = FileRenameSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         loc = serializer.validated_data.get("loc")
@@ -160,6 +160,7 @@ class MoveFileAPIView(OperationView):
     allowed_methods = ["put"]
 
     def put(self, request):
+        self.set_user_bucket()
         serializer = PasteFileSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         loc = serializer.validated_data.get("loc")
@@ -172,6 +173,7 @@ class DeleteFileAPIView(OperationView):
     allowed_methods = ["delete"]
 
     def delete(self, request):
+        self.set_user_bucket()
         serializer = FileDeleteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         file_list = serializer.validated_data.get("file_list")
