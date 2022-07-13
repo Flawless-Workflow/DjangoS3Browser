@@ -4,6 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.exceptions import NotAuthenticated, APIException
 from .operations import OperationsMixin
+from .utils import import_callable
 
 
 class OperationView(OperationsMixin, APIView):
@@ -12,17 +13,15 @@ class OperationView(OperationsMixin, APIView):
     ]
 
     def set_user_bucket(self):
+        """
+        Set user bucket based on settings variable
+        set USE_SEPARATE_USER_BUCKET= True in settings.py to customize a function
+        otherwise set to false and the user bucket will be the same as the AWS_STORAGE_BUCKET_NAME
+        """
         if getattr(settings, "USE_SEPARATE_USER_BUCKET", False):
-            user = self.request.user
-            if not user.is_authenticated:
-                raise NotAuthenticated()
-
-            if user.groups.filter(name="school").exists():
-                self.bucket_name = user.school.bucket_name
-                return
-            elif user.is_staff:
-                bucket_name = self.request.query_params.get("bucket", None)
-                if bucket_name is not None:
-                    self.bucket_name = bucket_name
-                    return
-            raise APIException(code=404, detail=_("Set Bucket name"))
+            set_bucket_func = import_callable(settings.SET_USER_BUCKET_FUNC)
+            self.bucket_name = set_bucket_func(
+                self.request.user, self.request.query_params.get("bucket")
+            )
+        else:
+            self.bucket_name = settings.AWS_STORAGE_BUCKET_NAME
