@@ -11,6 +11,7 @@ except ImportError:
     from io import StringIO
 
 from django.conf import settings
+from django.utils.translation import gettext_lazy as _
 from .exceptions import FileException
 
 logger = logging.getLogger(__name__)
@@ -32,9 +33,6 @@ s3client = boto3.client(
     aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
     endpoint_url=ENDPOINT_URL,
 )
-
-bucket = s3.Bucket(settings.AWS_STORAGE_BUCKET_NAME)
-bucket_location = s3client.get_bucket_location(Bucket=settings.AWS_STORAGE_BUCKET_NAME)
 
 class OperationsMixin():
     """
@@ -114,6 +112,20 @@ class OperationsMixin():
                 err,
             )
             raise FileException(detail=err)
+
+    def create_bucket(self) -> str:
+        try:
+            response = s3.create_bucket(Bucket=self.bucket_name)
+            return getattr(response, "name")
+        except Exception as err:
+            logger.debug(
+                "Error on line {}".format(sys.exc_info()[-1].tb_lineno),
+                type(err).__name__,
+                err,
+            )
+            raise FileException(detail=_("Unable to create bucket"))
+
+
 
     def get_folder_with_items(self, main_folder: str, sort_a_z: bool = False) -> List:
         """
