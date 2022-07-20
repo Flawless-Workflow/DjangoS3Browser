@@ -1,2 +1,4 @@
 Django>=2.0
 boto3>=1.4.6
+rest_framework>=3.7.0
+drf-spectacular>=0.22.1
