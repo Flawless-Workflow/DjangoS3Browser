@@ -71,7 +71,6 @@ class ListBucketsAPIView(OperationView):
         """
         List buckets
         """
-        self.set_user_bucket()
         data = self.get_all_buckets()
         serializer = BucketSerializer(data, many=True)
 
