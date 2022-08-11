@@ -140,7 +140,7 @@ class RenameFileAPIView(OperationView):
         file = serializer.validated_data.get("old_name")
         new_name = serializer.validated_data.get("new_name")
         file_name = self.rename(loc, file, new_name)
-        return Response(status=status.HTTP_200_OK)
+        return Response(_("File renamed."), status=status.HTTP_200_OK)
 
 
 class PasteFileAPIView(OperationView):
@@ -153,7 +153,7 @@ class PasteFileAPIView(OperationView):
         loc = serializer.validated_data.get("loc")
         file_list = serializer.validated_data.get("file_list")
         self.paste(loc, file_list)
-        return Response(status=status.HTTP_200_OK)
+        return Response(_("File copied."), status=status.HTTP_200_OK)
 
 
 class MoveFileAPIView(OperationView):
@@ -166,7 +166,7 @@ class MoveFileAPIView(OperationView):
         loc = serializer.validated_data.get("loc")
         file_list = serializer.validated_data.get("file_list")
         self.move(loc, file_list)
-        return Response(status=status.HTTP_200_OK)
+        return Response(_("File moved."), status=status.HTTP_200_OK)
 
 
 class DeleteFileAPIView(OperationView):
@@ -179,4 +179,4 @@ class DeleteFileAPIView(OperationView):
         serializer.is_valid(raise_exception=True)
         file_list = serializer.validated_data.get("file_list")
         super().delete(file_list)
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(_("File removed."), status=status.HTTP_204_NO_CONTENT)
