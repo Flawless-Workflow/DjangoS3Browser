@@ -6,6 +6,7 @@ from drf_spectacular.types import OpenApiTypes
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser
 from rest_framework import status
+from rest_framework.decorators import action
 
 from .serializers import *
 from .common import OperationView
@@ -169,9 +170,10 @@ class MoveFileAPIView(OperationView):
 
 
 class DeleteFileAPIView(OperationView):
-    allowed_methods = ["delete"]
+    allowed_methods = ["patch"]
 
-    def delete(self, request):
+    @action(["patch"], detail=False)
+    def remove(self, request):
         self.set_user_bucket()
         serializer = FileDeleteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
