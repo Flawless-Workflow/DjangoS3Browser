@@ -323,7 +323,7 @@ class OperationsMixin():
             raise FileException(detail=err)
 
 
-    def upload_file(self, location: str, file) -> None:
+    def upload_file(self, location: str, files) -> None:
         """
         Upload <file> to s3 storage
         :param location: str
@@ -332,11 +332,12 @@ class OperationsMixin():
         """
         try:
             location = self.strip_str(location)
-            s3client.put_object(
-                Bucket=self.bucket_name,
-                Key=urljoin(self.remove_start(location), file.name),
-                Body=file,
-            )
+            for file in files:
+                s3client.put_object(
+                    Bucket=self.bucket_name,
+                    Key=urljoin(self.remove_start(location), file.name),
+                    Body=file,
+                )
         except Exception as err:
             logger.debug(
                 "Error on line {}".format(sys.exc_info()[-1].tb_lineno),

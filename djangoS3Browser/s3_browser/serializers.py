@@ -8,8 +8,8 @@ class FileSerializer(serializers.Serializer):
     file_type = serializers.CharField(max_length=255, source="type")
 
 class UploadFileSerializer(serializers.Serializer):
-    files = serializers.FileField()
-    loc = serializers.CharField()
+    files = serializers.ListField(child=serializers.FileField(), required=True)
+    loc = serializers.CharField(required=True)
 
 class BucketSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=255)
