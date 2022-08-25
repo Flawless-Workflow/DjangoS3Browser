@@ -34,14 +34,20 @@ s3client = boto3.client(
     endpoint_url=ENDPOINT_URL,
 )
 
-class OperationsMixin():
+
+class OperationsMixin:
     """
     Big Note: for [1:]
     -starts with the default "-" sign for the selected file location.
     """
 
-    def __init__(self, bucket_name = settings.AWS_STORAGE_BUCKET_NAME) -> None:
+    def __init__(
+        self,
+        bucket_name=settings.AWS_STORAGE_BUCKET_NAME,
+        location_constraint=settings.AWS_STORAGE_BUCKET_LOCATION_CONSTRAINT,
+    ) -> None:
         self.bucket_name = bucket_name
+        self.location_constraint = location_constraint
 
     @staticmethod
     def strip_str(s: str) -> Optional[str]:
@@ -93,8 +99,7 @@ class OperationsMixin():
         else:
             return self.remove_start(s)
 
-
-    def get_all_buckets(self)-> list:
+    def get_all_buckets(self) -> list:
         """
         Get all buckets from s3
         :return:
@@ -103,7 +108,7 @@ class OperationsMixin():
             # all_buckets_s3 = s3.resource("s3")
             buckets = []
             for bucket in s3.buckets.all():
-                buckets.append({"name" : bucket.name})
+                buckets.append({"name": bucket.name})
             return buckets
         except Exception as err:
             logger.debug(
@@ -115,7 +120,12 @@ class OperationsMixin():
 
     def create_bucket(self) -> str:
         try:
-            response = s3.create_bucket(Bucket=self.bucket_name)
+            response = s3.create_bucket(
+                Bucket=self.bucket_name,
+                CreateBucketConfiguration={
+                    "LocationConstraint": self.location_constraint
+                },
+            )
             return getattr(response, "name")
         except Exception as err:
             logger.debug(
@@ -124,8 +134,6 @@ class OperationsMixin():
                 err,
             )
             raise FileException(detail=_("Unable to create bucket"))
-
-
 
     def get_folder_with_items(self, main_folder: str, sort_a_z: bool = False) -> List:
         """
@@ -136,7 +144,9 @@ class OperationsMixin():
         """
         try:
             main_folder = self.strip_str(main_folder)
-            sort_a_z = True if sort_a_z == "true" else False  # sorted method a to z/ z to a
+            sort_a_z = (
+                True if sort_a_z == "true" else False
+            )  # sorted method a to z/ z to a
             result = s3client.list_objects(
                 Bucket=self.bucket_name,
                 Prefix=main_folder[1:],
@@ -161,7 +171,6 @@ class OperationsMixin():
             )
             raise FileException(detail=err)
 
-
     def get_files(
         self, main_folder: str, result: List, sort_a_z: bool = False
     ) -> List[Dict[str, str]]:
@@ -176,7 +185,9 @@ class OperationsMixin():
             files_list = []
             for obj in result:
                 # main_folder[1:] exp; -folder1/folder2 => delete "-"
-                if self.remove_start(main_folder) != obj.get("Key"):  # if obj is not folder item
+                if self.remove_start(main_folder) != obj.get(
+                    "Key"
+                ):  # if obj is not folder item
                     object_url = urljoin(
                         ENDPOINT_URL,
                         "{0}/{1}".format(self.bucket_name, obj.get("Key")),
@@ -285,7 +296,6 @@ class OperationsMixin():
             )
             raise FileException(detail=err)
 
-
     def get_folders(
         self, main_folder: str, result: List, sort_a_z: bool = False
     ) -> List[Dict[str, str]]:
@@ -322,7 +332,6 @@ class OperationsMixin():
             )
             raise FileException(detail=err)
 
-
     def upload_file(self, location: str, files) -> None:
         """
         Upload <file> to s3 storage
@@ -346,7 +355,6 @@ class OperationsMixin():
             )
             raise FileException(detail=err)
 
-
     def upload_file_content(self, file_name: str, content: str) -> None:
         """
         Upload content to s3 storage
@@ -357,9 +365,7 @@ class OperationsMixin():
         try:
             file_name = self.remove_start(self.strip_str(file_name))
             body = content.encode()
-            s3client.put_object(
-                Bucket=self.bucket_name, Key=file_name, Body=body
-            )
+            s3client.put_object(Bucket=self.bucket_name, Key=file_name, Body=body)
         except Exception as err:
             logger.debug(
                 "Error on line {}".format(sys.exc_info()[-1].tb_lineno),
@@ -367,7 +373,6 @@ class OperationsMixin():
                 err,
             )
             raise FileException(detail=err)
-
 
     def create_folder_item(self, location: str, folder_name: str) -> None:
         """
@@ -395,7 +400,6 @@ class OperationsMixin():
             )
             raise FileException(detail=err)
 
-
     def download_file(self, file: str):
         """
         Download file from s3 storage
@@ -404,9 +408,7 @@ class OperationsMixin():
         """
         try:
             file = self.remove_start(self.strip_str(file))
-            response = s3client.get_object(
-                Bucket=self.bucket_name, Key=file
-            )
+            response = s3client.get_object(Bucket=self.bucket_name, Key=file)
             return response
         except Exception as err:
             logger.debug(
@@ -454,12 +456,13 @@ class OperationsMixin():
             return urljoin(location, new_name)
         except Exception as err:
             logger.debug(
-                "Error on line {}".format(sys.exc_info()[-1].tb_lineno), type(err).__name__, err
+                "Error on line {}".format(sys.exc_info()[-1].tb_lineno),
+                type(err).__name__,
+                err,
             )
             raise FileException(detail=err)
 
-
-    def paste(self,location: str, file_list: List[str]):
+    def paste(self, location: str, file_list: List[str]):
         """
         Copy file_list to folder
         :param location: str
@@ -477,10 +480,11 @@ class OperationsMixin():
                 )
         except Exception as err:
             logger.debug(
-                "Error on line {}".format(sys.exc_info()[-1].tb_lineno), type(err).__name__, err
+                "Error on line {}".format(sys.exc_info()[-1].tb_lineno),
+                type(err).__name__,
+                err,
             )
             raise FileException(detail=err)
-
 
     def move(self, location: str, file_list: List[str]):
         """
@@ -494,9 +498,13 @@ class OperationsMixin():
                 file = self.remove_start(self.strip_str(file))
 
                 if file.endswith("/"):
-                    to_file = urljoin(self.remove_start(location), file.rsplit("/", 2)[-2] + "/")
+                    to_file = urljoin(
+                        self.remove_start(location), file.rsplit("/", 2)[-2] + "/"
+                    )
                 else:
-                    to_file = urljoin(self.remove_start(location), file.rsplit("/", 1)[-1])
+                    to_file = urljoin(
+                        self.remove_start(location), file.rsplit("/", 1)[-1]
+                    )
 
                 if file == to_file:
                     """
@@ -516,10 +524,11 @@ class OperationsMixin():
                 )
         except Exception as err:
             logger.debug(
-                "Error on line {}".format(sys.exc_info()[-1].tb_lineno), type(err).__name__, err
+                "Error on line {}".format(sys.exc_info()[-1].tb_lineno),
+                type(err).__name__,
+                err,
             )
             raise FileException(detail=err)
-
 
     def delete(self, file_list: List[str]) -> None:
         """
@@ -530,11 +539,11 @@ class OperationsMixin():
         try:
             for file in file_list:
                 file = self.remove_start(self.strip_str(file))
-                s3.Bucket(self.bucket_name).objects.filter(
-                    Prefix=file
-                ).delete()
+                s3.Bucket(self.bucket_name).objects.filter(Prefix=file).delete()
         except Exception as err:
             logger.debug(
-                "Error on line {}".format(sys.exc_info()[-1].tb_lineno), type(err).__name__, err
+                "Error on line {}".format(sys.exc_info()[-1].tb_lineno),
+                type(err).__name__,
+                err,
             )
             raise FileException(detail=err)
