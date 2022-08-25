@@ -44,7 +44,7 @@ class OperationsMixin:
     def __init__(
         self,
         bucket_name=settings.AWS_STORAGE_BUCKET_NAME,
-        location_constraint=settings.AWS_STORAGE_BUCKET_LOCATION_CONSTRAINT,
+        location_constraint=settings.AWS_REGION,
     ) -> None:
         self.bucket_name = bucket_name
         self.location_constraint = location_constraint
