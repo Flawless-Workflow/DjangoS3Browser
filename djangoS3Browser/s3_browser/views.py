@@ -25,15 +25,27 @@ class GetFolderItemsAPIView(OperationView):
                 description=(
                     "The main folder to get the items from. " "Always starts with '-'."
                 ),
-                location=OpenApiParameter.PATH,
+                location=OpenApiParameter.QUERY,
+                required=True,
+            ),
+            OpenApiParameter(
+                name="sort_a_z",
+                type=OpenApiTypes.STR,
+                description=(
+                    "The order of items."
+                ),
+                location=OpenApiParameter.QUERY,
+                required=True
             )
         ],
     )
-    def get(self, request, main_folder, sort_a_z):
+    def get(self, request):
         """
         Get folder items
         """
         self.set_user_bucket()
+        main_folder = request.query_params.get('main_folder')
+        sort_a_z = request.query_params.get('sort_a_z')
         data = self.get_folder_with_items(main_folder, sort_a_z)
         serializer = FileSerializer(data, many=True)
 

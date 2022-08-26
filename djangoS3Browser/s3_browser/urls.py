@@ -22,7 +22,7 @@ from djangoS3Browser.s3_browser import views
 
 urlpatterns = [
     re_path(
-        r"folder-items/(?P<main_folder>.+)/(?P<sort_a_z>.+)/",
+        r"folder-items/",
         views.GetFolderItemsAPIView.as_view(),
         name="folder-items",
     ),
