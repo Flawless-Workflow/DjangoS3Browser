@@ -390,7 +390,6 @@ class OperationsMixin:
             s3client.put_object(
                 Bucket=self.bucket_name,
                 Key=urljoin(self.remove_start(location), folder_name),
-                ACL="public-read",
             )
         except Exception as err:
             logger.debug(
@@ -442,7 +441,6 @@ class OperationsMixin:
 
             s3client.copy_object(
                 Bucket=self.bucket_name,
-                ACL="public-read",
                 CopySource={
                     "Bucket": self.bucket_name,
                     "Key": urljoin(location, file),
@@ -474,7 +472,6 @@ class OperationsMixin:
                 file = self.remove_start(self.strip_str(file))
                 s3client.copy_object(
                     Bucket=self.bucket_name,
-                    ACL="public-read",
                     CopySource={"Bucket": self.bucket_name, "Key": file},
                     Key=urljoin(self.remove_start(location), file.rsplit("/", 1)[-1]),
                 )
@@ -514,7 +511,6 @@ class OperationsMixin:
 
                 s3client.copy_object(
                     Bucket=self.bucket_name,
-                    ACL="public-read",
                     CopySource={"Bucket": self.bucket_name, "Key": file},
                     Key=to_file,
                 )
