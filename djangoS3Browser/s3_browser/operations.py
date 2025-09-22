@@ -1,6 +1,8 @@
+import os
 from typing import Optional, List, Dict
 
 import boto3
+
 import sys
 import logging
 from urllib.parse import urljoin
@@ -433,32 +435,51 @@ class OperationsMixin:
             if file[-1] == "/" and new_name[-1] != "/":  # if file format exception
                 new_name += "/"
 
-            if file == new_name:
-                """
-                If rename canceled or name not changed
-                """
-                return urljoin(location, file)
+            source_key = os.path.join(location, file).replace("\\", "/")
+            dest_key = os.path.join(location, new_name).replace("\\", "/")
 
-            s3client.copy_object(
-                Bucket=self.bucket_name,
-                CopySource={
-                    "Bucket": self.bucket_name,
-                    "Key": urljoin(location, file),
-                },
-                Key=urljoin(location, new_name),
-            )
-            s3client.delete_object(
-                Bucket=self.bucket_name,
-                Key=urljoin(location, file),
-            )
-            return urljoin(location, new_name)
+            if file == new_name:
+                # If rename canceled or name not changed
+
+                return source_key
+
+            bucket = s3.Bucket(self.bucket_name)
+
+            objects_to_move = list(bucket.objects.filter(Prefix=source_key))
+
+            if not objects_to_move:
+                log = f"No objects found with prefix '{source_key}'. No action taken."
+                logger.warning(log)
+                return dest_key
+            log = f"Found {len(objects_to_move)} object(s) to rename."
+            logger.info(log)
+            copied_keys = []
+
+            for obj in objects_to_move:
+                new_key = obj.key.replace(source_key, dest_key, 1)
+                copy_source = {"Bucket": self.bucket_name, "Key": obj.key}
+                s3.Object(self.bucket_name, new_key).copy_from(CopySource=copy_source)
+                log = f"Copied '{obj.key}' to '{new_key}'"
+                logger.info(log)
+                copied_keys.append({"Key": obj.key})
+
+            log = f"Deleting {len(copied_keys)} original object(s)..."
+            logger.info(log)
+            response = bucket.delete_objects(Delete={"Objects": copied_keys})
+            if "Errors" in response:
+                logger.error("Errors occurred during deletion of original objects:")
+                for error in response["Errors"]:
+                    log = f"  - Key: {error['Key']}, Code: {error['Code']}, Message: {error['Message']}"
+                    logger.error(log)
+                raise FileException(
+                    detail="Error deleting original objects after rename."
+                )
+            logger.info("Rename operation completed successfully.")
+            return dest_key
         except Exception as err:
-            logger.debug(
-                "Error on line {}".format(sys.exc_info()[-1].tb_lineno),
-                type(err).__name__,
-                err,
-            )
-            raise FileException(detail=err)
+            log = f"Exception during rename operation: {str(err)}"
+            logger.debug(log)
+            raise FileException(detail=str(err)) from err
 
     def paste(self, location: str, file_list: List[str]):
         """
